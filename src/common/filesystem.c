@@ -1431,6 +1431,8 @@ void FS_BuildGenericSearchPath(void) {
 	Sys_Mkdir(path);
 }
 
+char **mapnames;
+
 void
 FS_BuildGameSpecificSearchPath(char *dir)
 {
@@ -1529,6 +1531,10 @@ FS_BuildGameSpecificSearchPath(char *dir)
 
 	// the gamedir has changed, so read in the corresponding configs
 	Qcommon_ExecConfigs(false);
+
+    // Clear the current list of maps in the "start network server" menu
+    // so that it will be re-initialized for this game dir
+    mapnames = NULL;
 
 #ifndef DEDICATED_ONLY
 	// this function is called whenever the game cvar changes => the player wants to switch to another mod
