@@ -64,6 +64,10 @@ keyname_t keynames[] = {
 	{"ENTER", K_ENTER},
 	{"ESCAPE", K_ESCAPE},
 	{"SPACE", K_SPACE},
+	{"SEMICOLON", ';'},   /* because a raw semicolon separates commands */
+	{"DOUBLEQUOTE", '"'}, /* because "" has special meaning in configs */
+	{"QUOTE", '\'' },     /* just to be sure */
+	{"DOLLAR", '$'},      /* $ is used in macros => can occur in configs */
 	{"BACKSPACE", K_BACKSPACE},
 
 	{"COMMAND", K_COMMAND},
@@ -80,6 +84,13 @@ keyname_t keynames[] = {
 	{"CTRL", K_CTRL},
 	{"SHIFT", K_SHIFT},
 
+	{"INS", K_INS},
+	{"DEL", K_DEL},
+	{"PGDN", K_PGDN},
+	{"PGUP", K_PGUP},
+	{"HOME", K_HOME},
+	{"END", K_END},
+
 	{"F1", K_F1},
 	{"F2", K_F2},
 	{"F3", K_F3},
@@ -92,19 +103,37 @@ keyname_t keynames[] = {
 	{"F10", K_F10},
 	{"F11", K_F11},
 	{"F12", K_F12},
+	{"F13", K_F13},
+	{"F14", K_F14},
+	{"F15", K_F15},
 
-	{"INS", K_INS},
-	{"DEL", K_DEL},
-	{"PGDN", K_PGDN},
-	{"PGUP", K_PGUP},
-	{"HOME", K_HOME},
-	{"END", K_END},
+	{"KP_HOME", K_KP_HOME},
+	{"KP_UPARROW", K_KP_UPARROW},
+	{"KP_PGUP", K_KP_PGUP},
+	{"KP_LEFTARROW", K_KP_LEFTARROW},
+	{"KP_5", K_KP_5},
+	{"KP_RIGHTARROW", K_KP_RIGHTARROW},
+	{"KP_END", K_KP_END},
+	{"KP_DOWNARROW", K_KP_DOWNARROW},
+	{"KP_PGDN", K_KP_PGDN},
+	{"KP_ENTER", K_KP_ENTER},
+	{"KP_INS", K_KP_INS},
+	{"KP_DEL", K_KP_DEL},
+	{"KP_SLASH", K_KP_SLASH},
+	{"KP_MINUS", K_KP_MINUS},
+	{"KP_PLUS", K_KP_PLUS},
+	{"KP_NUMLOCK", K_KP_NUMLOCK},
+	{"KP_STAR", K_KP_STAR},
+	{"KP_EQUALS", K_KP_EQUALS},
 
 	{"MOUSE1", K_MOUSE1},
 	{"MOUSE2", K_MOUSE2},
 	{"MOUSE3", K_MOUSE3},
 	{"MOUSE4", K_MOUSE4},
 	{"MOUSE5", K_MOUSE5},
+
+	{"MWHEELUP", K_MWHEELUP},
+	{"MWHEELDOWN", K_MWHEELDOWN},
 
 	{"JOY1", K_JOY1},
 	{"JOY2", K_JOY2},
@@ -147,63 +176,119 @@ keyname_t keynames[] = {
 	{"TRIG_LEFT", K_TRIG_LEFT},
 	{"TRIG_RIGHT", K_TRIG_RIGHT},
 
+	// virtual keys you get by pressing the corresponding normal joy key
+	// and the altselector key
+	{"JOY1_ALT", K_JOY1_ALT},
+	{"JOY2_ALT", K_JOY2_ALT},
+	{"JOY3_ALT", K_JOY3_ALT},
+	{"JOY4_ALT", K_JOY4_ALT},
+	{"JOY5_ALT", K_JOY5_ALT},
+	{"JOY6_ALT", K_JOY6_ALT},
+	{"JOY7_ALT", K_JOY7_ALT},
+	{"JOY8_ALT", K_JOY8_ALT},
+	{"JOY9_ALT", K_JOY9_ALT},
+	{"JOY10_ALT", K_JOY10_ALT},
+	{"JOY11_ALT", K_JOY11_ALT},
+	{"JOY12_ALT", K_JOY12_ALT},
+	{"JOY13_ALT", K_JOY13_ALT},
+	{"JOY14_ALT", K_JOY14_ALT},
+	{"JOY15_ALT", K_JOY15_ALT},
+	{"JOY16_ALT", K_JOY16_ALT},
+	{"JOY17_ALT", K_JOY17_ALT},
+	{"JOY18_ALT", K_JOY18_ALT},
+	{"JOY19_ALT", K_JOY19_ALT},
+	{"JOY20_ALT", K_JOY20_ALT},
+	{"JOY21_ALT", K_JOY21_ALT},
+	{"JOY22_ALT", K_JOY22_ALT},
+	{"JOY23_ALT", K_JOY23_ALT},
+	{"JOY24_ALT", K_JOY24_ALT},
+	{"JOY25_ALT", K_JOY25_ALT},
+	{"JOY26_ALT", K_JOY26_ALT},
+	{"JOY27_ALT", K_JOY27_ALT},
+	{"JOY28_ALT", K_JOY28_ALT},
+	{"JOY29_ALT", K_JOY29_ALT},
+	{"JOY30_ALT", K_JOY30_ALT},
+	{"JOY31_ALT", K_JOY31_ALT},
+	{"JOY32_ALT", K_JOY32_ALT},
+
+	{"HAT_UP_ALT", K_HAT_UP_ALT},
+	{"HAT_RIGHT_ALT", K_HAT_RIGHT_ALT},
+	{"HAT_DOWN_ALT", K_HAT_DOWN_ALT},
+	{"HAT_LEFT_ALT", K_HAT_LEFT_ALT},
+
+	{"TRIG_LEFT", K_TRIG_LEFT_ALT},
+	{"TRIG_RIGHT", K_TRIG_RIGHT_ALT},
+
 	{"JOY_BACK", K_JOY_BACK},
 
-	{"AUX1", K_AUX1},
-	{"AUX2", K_AUX2},
-	{"AUX3", K_AUX3},
-	{"AUX4", K_AUX4},
-	{"AUX5", K_AUX5},
-	{"AUX6", K_AUX6},
-	{"AUX7", K_AUX7},
-	{"AUX8", K_AUX8},
-	{"AUX9", K_AUX9},
-	{"AUX10", K_AUX10},
-	{"AUX11", K_AUX11},
-	{"AUX12", K_AUX12},
-	{"AUX13", K_AUX13},
-	{"AUX14", K_AUX14},
-	{"AUX15", K_AUX15},
-	{"AUX16", K_AUX16},
-	{"AUX17", K_AUX17},
-	{"AUX18", K_AUX18},
-	{"AUX19", K_AUX19},
-	{"AUX20", K_AUX20},
-	{"AUX21", K_AUX21},
-	{"AUX22", K_AUX22},
-	{"AUX23", K_AUX23},
-	{"AUX24", K_AUX24},
-	{"AUX25", K_AUX25},
-	{"AUX26", K_AUX26},
-	{"AUX27", K_AUX27},
-	{"AUX28", K_AUX28},
-	{"AUX29", K_AUX29},
-	{"AUX30", K_AUX30},
-	{"AUX31", K_AUX31},
-	{"AUX32", K_AUX32},
+	{"SUPER", K_SUPER},
+	{"COMPOSE", K_COMPOSE},
+	{"MODE", K_MODE},
+	{"HELP", K_HELP},
+	{"PRINT", K_PRINT},
+	{"SYSREQ", K_SYSREQ},
+	{"SCROLLOCK", K_SCROLLOCK},
+	{"MENU", K_MENU},
+	{"UNDO", K_UNDO},
 
-	{"KP_HOME", K_KP_HOME},
-	{"KP_UPARROW", K_KP_UPARROW},
-	{"KP_PGUP", K_KP_PGUP},
-	{"KP_LEFTARROW", K_KP_LEFTARROW},
-	{"KP_5", K_KP_5},
-	{"KP_RIGHTARROW", K_KP_RIGHTARROW},
-	{"KP_END", K_KP_END},
-	{"KP_DOWNARROW", K_KP_DOWNARROW},
-	{"KP_PGDN", K_KP_PGDN},
-	{"KP_ENTER", K_KP_ENTER},
-	{"KP_INS", K_KP_INS},
-	{"KP_DEL", K_KP_DEL},
-	{"KP_SLASH", K_KP_SLASH},
-	{"KP_MINUS", K_KP_MINUS},
-	{"KP_PLUS", K_KP_PLUS},
+	// entries for the mapped scancodes, see comment above K_SC_A in keyboard.h
+#define MY_SC_ENTRY(X) { #X , K_ ## X }
 
-	{"MWHEELUP", K_MWHEELUP},
-	{"MWHEELDOWN", K_MWHEELDOWN},
+	// { "SC_A", K_SC_A },
+	MY_SC_ENTRY(SC_A),
+	MY_SC_ENTRY(SC_B),
+	MY_SC_ENTRY(SC_C),
+	MY_SC_ENTRY(SC_D),
+	MY_SC_ENTRY(SC_E),
+	MY_SC_ENTRY(SC_F),
+	MY_SC_ENTRY(SC_G),
+	MY_SC_ENTRY(SC_H),
+	MY_SC_ENTRY(SC_I),
+	MY_SC_ENTRY(SC_J),
+	MY_SC_ENTRY(SC_K),
+	MY_SC_ENTRY(SC_L),
+	MY_SC_ENTRY(SC_M),
+	MY_SC_ENTRY(SC_N),
+	MY_SC_ENTRY(SC_O),
+	MY_SC_ENTRY(SC_P),
+	MY_SC_ENTRY(SC_Q),
+	MY_SC_ENTRY(SC_R),
+	MY_SC_ENTRY(SC_S),
+	MY_SC_ENTRY(SC_T),
+	MY_SC_ENTRY(SC_U),
+	MY_SC_ENTRY(SC_V),
+	MY_SC_ENTRY(SC_W),
+	MY_SC_ENTRY(SC_X),
+	MY_SC_ENTRY(SC_Y),
+	MY_SC_ENTRY(SC_Z),
+	MY_SC_ENTRY(SC_MINUS),
+	MY_SC_ENTRY(SC_EQUALS),
+	MY_SC_ENTRY(SC_LEFTBRACKET),
+	MY_SC_ENTRY(SC_RIGHTBRACKET),
+	MY_SC_ENTRY(SC_BACKSLASH),
+	MY_SC_ENTRY(SC_NONUSHASH),
+	MY_SC_ENTRY(SC_SEMICOLON),
+	MY_SC_ENTRY(SC_APOSTROPHE),
+	MY_SC_ENTRY(SC_GRAVE), // console key
+	MY_SC_ENTRY(SC_COMMA),
+	MY_SC_ENTRY(SC_PERIOD),
+	MY_SC_ENTRY(SC_SLASH),
+	MY_SC_ENTRY(SC_NONUSBACKSLASH),
+	MY_SC_ENTRY(SC_INTERNATIONAL1),
+	MY_SC_ENTRY(SC_INTERNATIONAL2),
+	MY_SC_ENTRY(SC_INTERNATIONAL3),
+	MY_SC_ENTRY(SC_INTERNATIONAL4),
+	MY_SC_ENTRY(SC_INTERNATIONAL5),
+	MY_SC_ENTRY(SC_INTERNATIONAL6),
+	MY_SC_ENTRY(SC_INTERNATIONAL7),
+	MY_SC_ENTRY(SC_INTERNATIONAL8),
+	MY_SC_ENTRY(SC_INTERNATIONAL9),
+	MY_SC_ENTRY(SC_THOUSANDSSEPARATOR),
+	MY_SC_ENTRY(SC_DECIMALSEPARATOR),
+	MY_SC_ENTRY(SC_CURRENCYUNIT),
+	MY_SC_ENTRY(SC_CURRENCYSUBUNIT),
 
-	{"PAUSE", K_PAUSE},
-
-	{"SEMICOLON", ';'}, /* because a raw semicolon seperates commands */
+#undef MY_SC_ENTRY
 
 	{NULL, 0}
 };
@@ -651,9 +736,11 @@ Key_KeynumToString(int keynum)
 		return "<KEY NOT FOUND>";
 	}
 
-	if ((keynum > 32) && (keynum < 127))
+	if ((keynum > 32) && (keynum < 127) && keynum != ';' && keynum != '"' && keynum != '\'' && keynum != '$')
 	{
-		/* printable ascii */
+		/* printable ASCII, except for special cases that have special meanings
+		   in configs like quotes or ; (separates commands) or $ (used to expand
+		   cvars to their values in macros/commands) and thus need escaping */
 		tinystr[0] = keynum;
 		return tinystr;
 	}
@@ -970,9 +1057,14 @@ Key_Init(void)
 	consolekeys[K_KP_INS] = true;
 	consolekeys[K_KP_DEL] = true;
 	consolekeys[K_KP_SLASH] = true;
+	consolekeys[K_KP_STAR] = true;
 	consolekeys[K_KP_PLUS] = true;
 	consolekeys[K_KP_MINUS] = true;
 	consolekeys[K_KP_5] = true;
+	consolekeys[K_MWHEELUP] = true;
+	consolekeys[K_MWHEELDOWN] = true;
+	consolekeys[K_MOUSE4] = true;
+	consolekeys[K_MOUSE5] = true;
 
 	consolekeys['`'] = false;
 	consolekeys['~'] = false;
@@ -1004,13 +1096,6 @@ Key_Init(void)
 void
 Char_Event(int key)
 {
-	/* console key is hardcoded, so the user can never unbind it */
-	if ((key == '^') || (key == '~') || (key == '`'))
-	{
-		Con_ToggleConsole_f();
-		return;
-	}
-
 	switch (cls.key_dest)
 	{
 		/* Chat */
@@ -1053,8 +1138,27 @@ Key_Event(int key, qboolean down, qboolean special)
 	cvar_t *fullscreen;
 	unsigned int time = Sys_Milliseconds();
 
-    /* Track if key is down */
+	// evil hack for the joystick key altselector, which turns K_JOYx into K_JOYx_ALT
+	if(joy_altselector_pressed && key >= K_JOY1 && key <= K_JOY_LAST_REGULAR)
+	{
+		// make sure key is not the altselector itself (which we won't turn into *_ALT)
+		if(keybindings[key] == NULL || strcmp(keybindings[key], "+joyaltselector") != 0)
+		{
+			int altkey = key + (K_JOY1_ALT - K_JOY1);
+			// allow fallback to binding with non-alt key
+			if(keybindings[altkey] != NULL || keybindings[key] == NULL)
+				key = altkey;
+		}
+	}
+
+	/* Track if key is down */
 	keydown[key] = down;
+
+	/* Evil hack against spurious cinematic aborts. */
+	if (down && (key != K_ESCAPE) && !keydown[K_SHIFT])
+	{
+		abort_cinematic = cls.realtime;
+	}
 
 	/* Ignore most autorepeats */
 	if (down)
@@ -1096,17 +1200,21 @@ Key_Event(int key, qboolean down, qboolean special)
 		return;
 	}
 
-	/* Toogle console though Shift + Escape */
-	if (down && keydown[K_SHIFT] && key == K_ESCAPE)
+	/* Toogle console through Shift + Escape or special K_CONSOLE key */
+	if (key == K_CONSOLE || (keydown[K_SHIFT] && key == K_ESCAPE))
 	{
-		Con_ToggleConsole_f();
+		if (down)
+		{
+			Con_ToggleConsole_f();
+		}
 		return;
 	}
 
 	/* Key is unbound */
-	if ((key >= K_MOUSE1 && key != K_JOY_BACK) && !keybindings[key] && (cls.key_dest != key_console))
+	if ((key >= K_MOUSE1 && key != K_JOY_BACK) && !keybindings[key] && (cls.key_dest != key_console) &&
+		(cls.state == ca_active))
 	{
-		Com_Printf("%s is unbound, hit F4 to set.\n", Key_KeynumToString(key));
+		Com_Printf("%s (%d) is unbound, hit F4 to set.\n", Key_KeynumToString(key), key);
 	}
 
 	/* While in attract loop all keys besides F1 to F12 (to
@@ -1245,12 +1353,8 @@ Key_Event(int key, qboolean down, qboolean special)
 		return;
 	}
 
-	/* All input subsystems handled after this
-	   point only care for key down events. */
-	if (!down)
-	{
-		return;
-	}
+	/* All input subsystems handled after this point only
+	   care for key down events (=> if(!down) returns above). */
 
 	/* Everything that's not a special char
 	   is processed by Char_Event(). */

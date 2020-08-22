@@ -28,13 +28,9 @@
 
 #include <signal.h>
 
-#if defined(__linux__) || defined(__FreeBSD__)
-
-#endif
-
 #include "../../common/header/common.h"
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(HAVE_EXECINFO)
 #include <execinfo.h>
 
 void
@@ -118,10 +114,12 @@ signalhandler(int sig)
 	raise(sig);
 }
 
+extern qboolean quitnextframe;
+
 void
 terminate(int sig)
 {
-	Cbuf_AddText("quit");
+	quitnextframe = true;
 }
 
 void

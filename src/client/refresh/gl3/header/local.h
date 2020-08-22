@@ -106,6 +106,8 @@ typedef struct
 	qboolean debug_output; // is GL_ARB_debug_output supported?
 	qboolean stencil; // Do we have a stencil buffer?
 
+	qboolean useBigVBO; // workaround for AMDs windows driver for fewer calls to glBufferData()
+
 	// ----
 
 	float max_anisotropy;
@@ -225,7 +227,12 @@ typedef struct
 	// NOTE: make sure siParticle is always the last shaderInfo (or adapt GL3_ShutdownShaders())
 	gl3ShaderInfo_t siParticle; // for particles. surprising, right?
 
-	GLuint vao3D, vbo3D; // for brushes etc, using 1 floats as vertex input (x,y,z, s,t, lms,lmt, normX,normY,normZ)
+	GLuint vao3D, vbo3D; // for brushes etc, using 10 floats and one uint as vertex input (x,y,z, s,t, lms,lmt, normX,normY,normZ ; lightFlags)
+
+	// the next two are for gl3config.useBigVBO == true
+	int vbo3Dsize;
+	int vbo3DcurOffset;
+
 	GLuint vaoAlias, vboAlias, eboAlias; // for models, using 9 floats as (x,y,z, s,t, r,g,b,a)
 	GLuint vaoParticle, vboParticle; // for particles, using 9 floats (x,y,z, size,distance, r,g,b,a)
 
@@ -349,6 +356,8 @@ GL3_BindEBO(GLuint ebo)
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 	}
 }
+
+extern void GL3_BufferAndDraw3D(const gl3_3D_vtx_t* verts, int numVerts, GLenum drawMode);
 
 extern qboolean GL3_CullBox(vec3_t mins, vec3_t maxs);
 extern void GL3_RotateForEntity(entity_t *e);
@@ -499,6 +508,7 @@ extern cvar_t *vid_gamma;
 extern cvar_t *gl3_intensity;
 extern cvar_t *gl3_intensity_2D;
 extern cvar_t *gl_anisotropic;
+extern cvar_t *gl_texturemode;
 
 extern cvar_t *r_lightlevel;
 extern cvar_t *gl3_overbrightbits;

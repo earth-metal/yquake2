@@ -40,11 +40,13 @@
 #define STB_VORBIS_NO_PUSHDATA_API
 #include "header/stb_vorbis.h"
 
-static cvar_t *ogg_shuffle;        /* Shuffle playback */
+static cvar_t *ogg_enabled;       /* Backend is enabled */
+static cvar_t *ogg_shuffle;       /* Shuffle playback */
 static cvar_t *ogg_ignoretrack0;  /* Toggle track 0 playing */
 static cvar_t *ogg_volume;        /* Music volume. */
 static int ogg_curfile;           /* Index of currently played file. */
 static int ogg_numbufs;           /* Number of buffers for OpenAL */
+static int ogg_numsamples;        /* Number of sambles read from the current file */
 static ogg_status_t ogg_status;   /* Status indicator. */
 static stb_vorbis *ogg_file;      /* Ogg Vorbis file. */
 static qboolean ogg_started;      /* Initialization flag. */
@@ -59,11 +61,17 @@ enum GameType {
 	rogue
 };
 
+struct {
+	qboolean saved;
+	int curfile;
+	int numsamples;
+} ogg_saved_state;
+
 // --------
 
 /*
  * The GOG version of Quake2 has the music tracks in music/TrackXX.ogg
- * That music/ dir is next to baseq/ (not in it) and contains Track02.ogg to Track21.ogg
+ * That music/ dir is next to baseq2/ (not in it) and contains Track02.ogg to Track21.ogg
  * There
  * - Track02 to Track11 correspond to Quake2 (baseq2) CD tracks 2-11
  * - Track12 to Track21 correspond to the Ground Zero (rogue) addon's CD tracks 2-11
@@ -90,7 +98,7 @@ static int getMappedGOGtrack(int track, enum GameType gameType)
 		case  2: return 9;  // baseq2 9
 		case  3: return 13; // rogue  3
 		case  4: return 14; // rogue  4
-		case  5: return 7;  // baseq2 6
+		case  5: return 7;  // baseq2 7
 		case  6: return 16; // rogue  6
 		case  7: return 2;  // baseq2 2
 		case  8: return 15; // rogue  5
@@ -123,7 +131,7 @@ OGG_InitTrackList(void)
 	char gameMusicDir[MAX_QPATH] = {0}; // e.g. "xatrix/music"
 	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
 
-	if (gameCvar == NULL || gameCvar->string[0] == '\0' || strcmp(BASEDIRNAME, gameCvar->string) == 0)
+	if (gameCvar->string[0] == '\0' || strcmp(BASEDIRNAME, gameCvar->string) == 0)
 	{
 		// baseq2 => only 2 dirs in searchPath
 		potMusicDirs[0] = BASEDIRNAME "/music/"; // baseq2/music/
@@ -236,6 +244,8 @@ static OGG_Read(void)
 
 	if (read_samples > 0)
 	{
+		ogg_numsamples += read_samples;
+
 		S_RawSamples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
 			(byte *)samples, ogg_volume->value);
 	}
@@ -249,6 +259,7 @@ static OGG_Read(void)
 		stb_vorbis_close(ogg_file);
 		ogg_status = STOP;
 		ogg_numbufs = 0;
+		ogg_numsamples = 0;
 
 		OGG_PlayTrack(ogg_curfile);
 	}
@@ -262,6 +273,15 @@ OGG_Stream(void)
 {
 	if (!ogg_started)
 	{
+		return;
+	}
+
+	/* OGG playback was disabled since the last package frame.
+	   Shutdown the backend to stop all playing tracks and to
+	   prevend OGG_PLayTrack() from starting new ones. */
+	if (ogg_enabled->value != 1)
+	{
+		OGG_Shutdown();
 		return;
 	}
 
@@ -314,6 +334,16 @@ OGG_Stream(void)
 void
 OGG_PlayTrack(int trackNo)
 {
+	if (sound_started == SS_NOT)
+	{
+		return; // sound is not initialized
+	}
+
+	if (ogg_started == false)
+	{
+		return;
+	}
+
 	// Track 0 means "stop music".
 	if(trackNo == 0)
 	{
@@ -411,6 +441,7 @@ OGG_PlayTrack(int trackNo)
 
 	/* Play file. */
 	ogg_curfile = trackNo;
+	ogg_numsamples = 0;
 	ogg_status = PLAY;
 }
 
@@ -577,6 +608,48 @@ OGG_Cmd(void)
 	}
 }
 
+/*
+ * Saves the current state of the subsystem.
+ */
+void
+OGG_SaveState(void)
+{
+	if (ogg_status != PLAY)
+	{
+		ogg_saved_state.saved = false;
+
+		return;
+	}
+
+	ogg_saved_state.saved = true;
+	ogg_saved_state.curfile = ogg_curfile;
+	ogg_saved_state.numsamples = ogg_numsamples;
+}
+
+/*
+ * Recover the previously saved state.
+ */
+void
+OGG_RecoverState(void)
+{
+	if (!ogg_saved_state.saved)
+	{
+		return;
+	}
+
+	// Mkay, ultra evil hack to recover the state in case of
+	// shuffled playback. OGG_PlayTrack() does the shuffeling,
+	// so switch it of before and enable after state recovery.
+	int shuffle_state = ogg_shuffle->value;
+	Cvar_SetValue("ogg_shuffle", 0);
+
+	OGG_PlayTrack(ogg_saved_state.curfile);
+	stb_vorbis_seek_frame(ogg_file, ogg_saved_state.numsamples);
+	ogg_numsamples = ogg_saved_state.numsamples;
+
+	Cvar_SetValue("ogg_shuffle", shuffle_state);
+}
+
 // --------
 
 /*
@@ -589,8 +662,7 @@ OGG_Init(void)
 	ogg_shuffle = Cvar_Get("ogg_shuffle", "0", CVAR_ARCHIVE);
 	ogg_ignoretrack0 = Cvar_Get("ogg_ignoretrack0", "0", CVAR_ARCHIVE);
 	ogg_volume = Cvar_Get("ogg_volume", "0.7", CVAR_ARCHIVE);
-
-	cvar_t *ogg_enabled = Cvar_Get("ogg_enable", "1", CVAR_ARCHIVE);
+	ogg_enabled = Cvar_Get("ogg_enable", "1", CVAR_ARCHIVE);
 
 	if (ogg_enabled->value != 1)
 	{
@@ -602,6 +674,7 @@ OGG_Init(void)
 
 	// Global variables
 	ogg_curfile = -1;
+	ogg_numsamples = 0;
 	ogg_status = STOP;
 
 	ogg_started = true;
@@ -621,7 +694,7 @@ OGG_Shutdown(void)
 	// Music must be stopped.
 	OGG_Stop();
 
-	// Free file lsit.
+	// Free file list.
 	for(int i=0; i<MAX_NUM_OGGTRACKS; ++i)
 	{
 		if(ogg_tracks[i] != NULL)

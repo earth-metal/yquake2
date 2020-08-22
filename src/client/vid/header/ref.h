@@ -99,7 +99,7 @@ typedef struct {
 	float		vieworg[3];
 	float		viewangles[3];
 	float		blend[4]; /* rgba 0-1 full screen blend */
-	float		time; /* time is uesed to auto animate */
+	float		time; /* time is used to auto animate */
 	int			rdflags; /* RDF_UNDERWATER, etc */
 
 	byte		*areabits; /* if not NULL, only areas with set bits will be drawn */
@@ -198,7 +198,7 @@ typedef struct
 
 typedef struct
 {
-	void	(IMPORT *Sys_Error) (int err_level, char *str, ...) __attribute__ ((format (printf, 2, 3)));
+	YQ2_ATTR_NORETURN_FUNCPTR void	(IMPORT *Sys_Error) (int err_level, char *str, ...) __attribute__ ((format (printf, 2, 3)));
 
 	void	(IMPORT *Cmd_AddCommand) (char *name, void(*cmd)(void));
 	void	(IMPORT *Cmd_RemoveCommand) (char *name);
@@ -231,6 +231,7 @@ typedef struct
 	void		(IMPORT *Vid_WriteScreenshot)( int width, int height, int comp, const void* data );
 
 	qboolean	(IMPORT *GLimp_InitGraphics)(int fullscreen, int *pwidth, int *pheight);
+	qboolean	(IMPORT *GLimp_GetDesktopMode)(int *pwidth, int *pheight);
 } refimport_t;
 
 // this is the only function actually exported at the linker level

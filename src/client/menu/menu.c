@@ -281,39 +281,6 @@ Key_GetMenuKey(int key)
 		case K_JOY30:
 		case K_JOY31:
 
-		case K_AUX1:
-		case K_AUX2:
-		case K_AUX3:
-		case K_AUX4:
-		case K_AUX5:
-		case K_AUX6:
-		case K_AUX7:
-		case K_AUX8:
-		case K_AUX9:
-		case K_AUX10:
-		case K_AUX11:
-		case K_AUX12:
-		case K_AUX13:
-		case K_AUX14:
-		case K_AUX15:
-		case K_AUX16:
-		case K_AUX17:
-		case K_AUX18:
-		case K_AUX19:
-		case K_AUX20:
-		case K_AUX21:
-		case K_AUX22:
-		case K_AUX23:
-		case K_AUX24:
-		case K_AUX25:
-		case K_AUX26:
-		case K_AUX27:
-		case K_AUX28:
-		case K_AUX29:
-		case K_AUX30:
-		case K_AUX31:
-		case K_AUX32:
-
 		case K_KP_ENTER:
 		case K_ENTER:
 			return K_ENTER;
@@ -329,11 +296,12 @@ const char *
 Default_MenuKey(menuframework_s *m, int key)
 {
     const char *sound = NULL;
-    menucommon_s *item;
     int menu_key = Key_GetMenuKey(key);
 
     if (m)
     {
+        menucommon_s *item;
+
         if ((item = Menu_ItemAtCursor(m)) != 0)
         {
             if (item->type == MTYPE_FIELD)
@@ -433,13 +401,14 @@ M_Print(int x, int y, char *str)
     }
 }
 
+/* Unsused, left for backward compability */
 void
 M_DrawPic(int x, int y, char *pic)
 {
 	float scale = SCR_GetMenuScale();
 
-    Draw_PicScaled((x + ((viddef.width - 320) >> 1)) * scale,
-             (y + ((viddef.height - 240) >> 1)) * scale, pic, scale);
+	Draw_PicScaled((x + ((viddef.width - 320) >> 1)) * scale,
+		       (y + ((viddef.height - 240) >> 1)) * scale, pic, scale);
 }
 
 /*
@@ -530,7 +499,7 @@ static int m_popup_endtime;
 static void
 M_Popup(void)
 {
-    int x, y, width, lines;
+    int width, lines;
     int n;
     char *str;
 
@@ -569,6 +538,7 @@ M_Popup(void)
 
     if (width)
     {
+        int x, y;
         width += 2;
 
         x = (320 - (width + 2) * 8) / 2;
@@ -820,7 +790,8 @@ char *bindnames[][2] =
     {"invdrop", "drop item"},
     {"invprev", "prev item"},
     {"invnext", "next item"},
-    {"cmd help", "help computer"}
+    {"cmd help", "help computer"},
+    {"+joyaltselector", "enable alt joy keys"}
 };
 #define NUM_BINDNAMES (sizeof bindnames / sizeof bindnames[0])
 
@@ -835,12 +806,12 @@ M_UnbindCommand(char *command)
 {
     int j;
     int l;
-    char *b;
 
     l = strlen(command);
 
-    for (j = 0; j < 256; j++)
+    for (j = 0; j < K_LAST; j++)
     {
+        char *b;
         b = keybindings[j];
 
         if (!b)
@@ -861,14 +832,14 @@ M_FindKeysForCommand(char *command, int *twokeys)
     int count;
     int j;
     int l;
-    char *b;
 
     twokeys[0] = twokeys[1] = -1;
     l = strlen(command);
     count = 0;
 
-    for (j = 0; j < 256; j++)
+    for (j = 0; j < K_LAST; j++)
     {
+        char *b;
         b = keybindings[j];
 
         if (!b)
@@ -1474,9 +1445,10 @@ M_Menu_Video_f(void)
  * END GAME MENU
  */
 
+#define CREDITS_SIZE 256
 static int credits_start_time;
 static const char **credits;
-static char *creditsIndex[256];
+static char *creditsIndex[CREDITS_SIZE];
 static char *creditsBuffer;
 static const char *idcredits[] = {
 	"+QUAKE II BY ID SOFTWARE",
@@ -1555,11 +1527,15 @@ static const char *idcredits[] = {
 	"Marty Stratton",
 	"Henk Hartong",
 	"",
+	"+PATCHES AUTHORS",
+	"eliasm",
+	"",
 	"+YAMAGI QUAKE II BY",
 	"Yamagi Burmeister",
 	"Daniel Gibson",
 	"Sander van Dijk",
 	"Denis Pauk",
+	"Bjorn Alfredsson",
 	"",
 	"Quake II(tm) (C)1997 Id Software, Inc.",
 	"All Rights Reserved.  Distributed by",
@@ -1907,7 +1883,6 @@ M_Credits_Key(int key)
 static void
 M_Menu_Credits_f(void)
 {
-    int n;
     int count;
     char *p;
 
@@ -1916,9 +1891,11 @@ M_Menu_Credits_f(void)
 
     if (count != -1)
     {
+        int n;
         p = creditsBuffer;
 
-        for (n = 0; n < 255; n++)
+        // CREDITS_SIZE - 1 - last pointer should be NULL
+        for (n = 0; n < CREDITS_SIZE - 1; n++)
         {
             creditsIndex[n] = p;
 
@@ -1946,11 +1923,14 @@ M_Menu_Credits_f(void)
 
             if (--count == 0)
             {
+                // no credits any more
+                // move one step futher for set NULL
+                n ++;
                 break;
             }
         }
 
-        creditsIndex[++n] = 0;
+        creditsIndex[n] = 0;
         credits = (const char **)creditsIndex;
     }
     else
@@ -2148,11 +2128,100 @@ M_Menu_Game_f(void)
 }
 
 /*
+ * CONFIRM DELETE MENU
+ */
+
+static void LoadGame_MenuInit(void);
+
+static menuframework_s s_confirmdeletesavegame_menu;
+static menuseparator_s s_deletesavegame_label;
+static menuaction_s s_confirmdeletesavegame_action;
+static menuaction_s s_canceldeletesavegame_action;
+
+void (*ParentInitFunc)(void);
+
+static void
+DeleteSaveGameCallback(void *self)
+{
+	char name[MAX_OSPATH];
+	menuaction_s *item = (menuaction_s *)self;
+
+	Com_sprintf(name, sizeof(name), "%s/save/save%d/", FS_Gamedir(), item->generic.localdata[0]);
+	Sys_RemoveDir(name);
+
+	ParentInitFunc();
+	M_PopMenu();
+}
+
+static void
+CancelDeleteSaveGameCallback(void *unused)
+{
+	M_PopMenu();
+}
+
+static const char *
+DeleteSaveGame_MenuKey(int key)
+{
+    return Default_MenuKey(&s_confirmdeletesavegame_menu, key);
+}
+
+static void
+DeleteSaveGame_MenuDraw(void)
+{
+    Menu_AdjustCursor(&s_confirmdeletesavegame_menu, 1);
+    Menu_Draw(&s_confirmdeletesavegame_menu);
+}
+
+static void
+ConfirmDeleteSaveGame_MenuInit(int i, void (*callback)(void))
+{
+	float scale = SCR_GetMenuScale();
+
+	ParentInitFunc = callback;
+
+	// 32 = strlen("Are you sure...")
+	s_confirmdeletesavegame_menu.x = viddef.width / 2 - (8 * 32 * scale / 2);
+	s_confirmdeletesavegame_menu.y = viddef.height / (2 * scale) - 58;
+	s_confirmdeletesavegame_menu.nitems = 0;
+
+	s_deletesavegame_label.generic.type = MTYPE_SEPARATOR;
+	s_deletesavegame_label.generic.name = "Are you sure you want to delete?";
+	s_deletesavegame_label.generic.x = 8 * scale * 32;
+	s_deletesavegame_label.generic.y = 0;
+	s_deletesavegame_label.generic.flags = QMF_LEFT_JUSTIFY;
+	Menu_AddItem(&s_confirmdeletesavegame_menu, &s_deletesavegame_label);
+
+	s_confirmdeletesavegame_action.generic.type = MTYPE_ACTION;
+	s_confirmdeletesavegame_action.generic.name = "yes";
+	s_confirmdeletesavegame_action.generic.x = scale * 32;
+	s_confirmdeletesavegame_action.generic.y = 20;
+	s_confirmdeletesavegame_action.generic.localdata[0] = i;
+	s_confirmdeletesavegame_action.generic.flags = QMF_LEFT_JUSTIFY;
+	s_confirmdeletesavegame_action.generic.callback = DeleteSaveGameCallback;
+	Menu_AddItem(&s_confirmdeletesavegame_menu, &s_confirmdeletesavegame_action);
+
+	s_canceldeletesavegame_action.generic.type = MTYPE_ACTION;
+	s_canceldeletesavegame_action.generic.name = "no";
+	s_canceldeletesavegame_action.generic.x = scale * 32;
+	s_canceldeletesavegame_action.generic.y = 30;
+	s_canceldeletesavegame_action.generic.flags = QMF_LEFT_JUSTIFY;
+	s_canceldeletesavegame_action.generic.callback = CancelDeleteSaveGameCallback;
+	Menu_AddItem(&s_confirmdeletesavegame_menu, &s_canceldeletesavegame_action);
+}
+
+
+/*
  * LOADGAME MENU
  */
 
-#define MAX_SAVESLOTS 16
-#define MAX_SAVEPAGES 2
+#define MAX_SAVESLOTS 14
+#define MAX_SAVEPAGES 4
+
+// The magic comment string length of 32 is the same as
+// the comment string length set in SV_WriteServerFile()!
+
+static char m_quicksavestring[32];
+static qboolean m_quicksavevalid;
 
 static char m_savestrings[MAX_SAVESLOTS][32];
 static qboolean m_savevalid[MAX_SAVESLOTS];
@@ -2161,10 +2230,10 @@ static int m_loadsave_page;
 static char m_loadsave_statusbar[32];
 
 static menuframework_s s_loadgame_menu;
-static menuaction_s s_loadgame_actions[MAX_SAVESLOTS];
+static menuaction_s s_loadgame_actions[MAX_SAVESLOTS + 1]; // One for quick
 
 static menuframework_s s_savegame_menu;
-static menuaction_s s_savegame_actions[MAX_SAVESLOTS];
+static menuaction_s s_savegame_actions[MAX_SAVESLOTS + 1]; // One for quick
 
 static void
 Create_Savestrings(void)
@@ -2172,7 +2241,38 @@ Create_Savestrings(void)
 	int i;
 	fileHandle_t f;
 	char name[MAX_OSPATH];
+	char tmp[32]; // Same length as m_quicksavestring-
 
+	// The quicksave slot...
+	FS_FOpenFile("save/quick/server.ssv", &f, true);
+
+	if (!f)
+	{
+		strcpy(m_quicksavestring, "QUICKSAVE <empty>");
+		m_quicksavevalid = false;
+	}
+	else
+	{
+		FS_Read(tmp, sizeof(tmp), f);
+		FS_FCloseFile(f);
+
+		if (strlen(tmp) > 12)
+		{
+			/* Horrible hack to construct a nice looking 'QUICKSAVE Level Name'
+			   comment string matching the 'ENTERING Level Name' comment string
+			   of autosaves. The comment field is in format 'HH:MM mm:dd  Level
+			   Name'. Remove the date (the first 13) characters and replace it
+			   with 'QUICKSAVE'. */
+			Com_sprintf(m_quicksavestring, sizeof(m_quicksavestring), "QUICKSAVE %s", tmp + 13);
+		}
+		else
+		{
+			Q_strlcpy(m_quicksavestring, tmp, sizeof(m_quicksavestring));
+		}
+		m_quicksavevalid = true;
+	}
+
+	// ... and everything else.
 	for (i = 0; i < MAX_SAVESLOTS; i++)
 	{
 		Com_sprintf(name, sizeof(name), "save/save%i/server.ssv", m_loadsave_page * MAX_SAVESLOTS + i);
@@ -2196,7 +2296,6 @@ static void
 LoadSave_AdjustPage(int dir)
 {
 	int i;
-	char *str;
 
 	m_loadsave_page += dir;
 
@@ -2213,6 +2312,7 @@ LoadSave_AdjustPage(int dir)
 
 	for (i = 0; i < MAX_SAVEPAGES; i++)
 	{
+		char *str;
 		str = va("%c%d%c",
 				i == m_loadsave_page ? '[' : ' ',
 				i + 1,
@@ -2233,7 +2333,15 @@ LoadGameCallback(void *self)
 {
     menuaction_s *a = (menuaction_s *)self;
 
-    Cbuf_AddText(va("load save%i\n", a->generic.localdata[0]));
+	if (a->generic.localdata[0] == -1)
+	{
+		Cbuf_AddText("load quick\n");
+	}
+	else
+	{
+		Cbuf_AddText(va("load save%i\n", a->generic.localdata[0]));
+	}
+
     M_ForceMenuOff();
 }
 
@@ -2249,24 +2357,45 @@ LoadGame_MenuInit(void)
 
     Create_Savestrings();
 
+	// The quicksave slot...
+	s_loadgame_actions[0].generic.type = MTYPE_ACTION;
+	s_loadgame_actions[0].generic.name = m_quicksavestring;
+	s_loadgame_actions[0].generic.x = 0;
+	s_loadgame_actions[0].generic.y = 0;
+	s_loadgame_actions[0].generic.localdata[0] = -1;
+	s_loadgame_actions[0].generic.flags = QMF_LEFT_JUSTIFY;
+
+	if (!m_quicksavevalid)
+	{
+		s_loadgame_actions[0].generic.callback = NULL;
+	}
+	else
+	{
+		s_loadgame_actions[0].generic.callback = LoadGameCallback;
+	}
+
+	Menu_AddItem(&s_loadgame_menu, &s_loadgame_actions[0]);
+
+	// ...and everything else.
     for (i = 0; i < MAX_SAVESLOTS; i++)
     {
-        s_loadgame_actions[i].generic.type = MTYPE_ACTION;
-        s_loadgame_actions[i].generic.name = m_savestrings[i];
-        s_loadgame_actions[i].generic.x = 0;
-        s_loadgame_actions[i].generic.y = i * 10;
-        s_loadgame_actions[i].generic.localdata[0] = i + m_loadsave_page * MAX_SAVESLOTS;
-        s_loadgame_actions[i].generic.flags = QMF_LEFT_JUSTIFY;
+        s_loadgame_actions[i + 1].generic.type = MTYPE_ACTION;
+        s_loadgame_actions[i + 1].generic.name = m_savestrings[i];
+        s_loadgame_actions[i + 1].generic.x = 0;
+        s_loadgame_actions[i + 1].generic.y = i * 10 + 20;
+        s_loadgame_actions[i + 1].generic.localdata[0] = i + m_loadsave_page * MAX_SAVESLOTS;
+        s_loadgame_actions[i + 1].generic.flags = QMF_LEFT_JUSTIFY;
+
         if (!m_savevalid[i])
         {
-            s_loadgame_actions[i].generic.callback = NULL;
+            s_loadgame_actions[i + 1].generic.callback = NULL;
         }
         else
         {
-            s_loadgame_actions[i].generic.callback = LoadGameCallback;
+            s_loadgame_actions[i + 1].generic.callback = LoadGameCallback;
         }
 
-        Menu_AddItem(&s_loadgame_menu, &s_loadgame_actions[i]);
+        Menu_AddItem(&s_loadgame_menu, &s_loadgame_actions[i + 1]);
     }
 
     Menu_SetStatusBar(&s_loadgame_menu, m_loadsave_statusbar);
@@ -2285,6 +2414,7 @@ LoadGame_MenuKey(int key)
 {
     static menuframework_s *m = &s_loadgame_menu;
     int menu_key = Key_GetMenuKey(key);
+    menucommon_s *item;
 
     switch (menu_key)
     {
@@ -2314,6 +2444,20 @@ LoadGame_MenuKey(int key)
         LoadGame_MenuInit();
         return menu_move_sound;
 
+    case K_BACKSPACE:
+    case K_DEL:
+    case K_KP_DEL:
+		if ((item = Menu_ItemAtCursor(m)) != NULL)
+		{
+			if (item->type == MTYPE_ACTION)
+			{
+				ConfirmDeleteSaveGame_MenuInit(item->localdata[0], LoadGame_MenuInit);
+				M_PushMenu(DeleteSaveGame_MenuDraw, DeleteSaveGame_MenuKey);
+			}
+		}
+
+		return menu_move_sound;
+
     default:
         s_savegame_menu.cursor = s_loadgame_menu.cursor;
         break;
@@ -2339,7 +2483,16 @@ SaveGameCallback(void *self)
 {
     menuaction_s *a = (menuaction_s *)self;
 
-    if (a->generic.localdata[0] == 0)
+    if (a->generic.localdata[0] == -1)
+	{
+        m_popup_string = "This slot is reserved for\n"
+                         "quicksaving, so please select\n"
+                         "another one.";
+        m_popup_endtime = cls.realtime + 2000;
+        M_Popup();
+        return;
+	}
+	else if (a->generic.localdata[0] == 0)
     {
         m_popup_string = "This slot is reserved for\n"
                          "autosaving, so please select\n"
@@ -2374,18 +2527,29 @@ SaveGame_MenuInit(void)
 
     Create_Savestrings();
 
-    /* don't include the autosave slot */
+	// The quicksave slot...
+	s_savegame_actions[0].generic.type = MTYPE_ACTION;
+	s_savegame_actions[0].generic.name = m_quicksavestring;
+	s_savegame_actions[0].generic.x = 0;
+	s_savegame_actions[0].generic.y = 0;
+	s_savegame_actions[0].generic.localdata[0] = -1;
+	s_savegame_actions[0].generic.flags = QMF_LEFT_JUSTIFY;
+	s_savegame_actions[0].generic.callback = SaveGameCallback;
+
+	Menu_AddItem(&s_savegame_menu, &s_savegame_actions[0]);
+
+	// ...and everything else.
     for (i = 0; i < MAX_SAVESLOTS; i++)
     {
-        s_savegame_actions[i].generic.type = MTYPE_ACTION;
-        s_savegame_actions[i].generic.name = m_savestrings[i];
-        s_savegame_actions[i].generic.x = 0;
-        s_savegame_actions[i].generic.y = i * 10;
-        s_savegame_actions[i].generic.localdata[0] = i + m_loadsave_page * MAX_SAVESLOTS;
-        s_savegame_actions[i].generic.flags = QMF_LEFT_JUSTIFY;
-        s_savegame_actions[i].generic.callback = SaveGameCallback;
+        s_savegame_actions[i + 1].generic.type = MTYPE_ACTION;
+        s_savegame_actions[i + 1].generic.name = m_savestrings[i];
+        s_savegame_actions[i + 1].generic.x = 0;
+        s_savegame_actions[i + 1].generic.y = i * 10 + 20;
+        s_savegame_actions[i + 1].generic.localdata[0] = i + m_loadsave_page * MAX_SAVESLOTS;
+        s_savegame_actions[i + 1].generic.flags = QMF_LEFT_JUSTIFY;
+        s_savegame_actions[i + 1].generic.callback = SaveGameCallback;
 
-        Menu_AddItem(&s_savegame_menu, &s_savegame_actions[i]);
+        Menu_AddItem(&s_savegame_menu, &s_savegame_actions[i + 1]);
     }
 
     Menu_SetStatusBar(&s_savegame_menu, m_loadsave_statusbar);
@@ -2396,6 +2560,7 @@ SaveGame_MenuKey(int key)
 {
     static menuframework_s *m = &s_savegame_menu;
     int menu_key = Key_GetMenuKey(key);
+    menucommon_s *item;
 
     if (m_popup_string)
     {
@@ -2431,6 +2596,19 @@ SaveGame_MenuKey(int key)
         SaveGame_MenuInit();
         return menu_move_sound;
 
+    case K_BACKSPACE:
+    case K_DEL:
+    case K_KP_DEL:
+		if ((item = Menu_ItemAtCursor(m)) != NULL)
+		{
+			if (item->type == MTYPE_ACTION)
+			{
+				ConfirmDeleteSaveGame_MenuInit(item->localdata[0], SaveGame_MenuInit);
+				M_PushMenu(DeleteSaveGame_MenuDraw, DeleteSaveGame_MenuKey);
+			}
+		}
+
+		return menu_move_sound;
     default:
         s_loadgame_menu.cursor = s_savegame_menu.cursor;
         break;
@@ -2817,13 +2995,13 @@ StartServer_MenuInit(void)
 
     char *buffer;
     char *s;
-    int length;
-    int i;
     float scale = SCR_GetMenuScale();
 
     /* initialize list of maps once, reuse it afterwards (=> it isn't freed unless the game dir is changed) */
     if (mapnames == NULL)
     {
+        int i, length;
+
         nummaps = 0;
         s_startmap_list.curvalue = 0;
 
@@ -2838,7 +3016,7 @@ StartServer_MenuInit(void)
 
         while (i < length)
         {
-            if (s[i] == '\r')
+            if (s[i] == '\n')
             {
                 nummaps++;
             }
@@ -2852,6 +3030,9 @@ StartServer_MenuInit(void)
         }
 
         mapnames = malloc(sizeof(char *) * (nummaps + 1));
+
+        YQ2_COM_CHECK_OOM(mapnames, "malloc(sizeof(char *) * (nummaps + 1))", sizeof(char *) * (nummaps + 1))
+
         memset(mapnames, 0, sizeof(char *) * (nummaps + 1));
 
         s = buffer;
@@ -2875,6 +3056,8 @@ StartServer_MenuInit(void)
             Com_sprintf(scratch, sizeof(scratch), "%s\n%s", longname, shortname);
 
             mapnames[i] = malloc(strlen(scratch) + 1);
+            YQ2_COM_CHECK_OOM(mapnames, "malloc()", strlen(scratch)+1)
+
             strcpy(mapnames[i], scratch);
         }
 
@@ -2989,6 +3172,7 @@ StartServer_MenuInit(void)
     s_hostname_field.length = 12;
     s_hostname_field.visible_length = 12;
     strcpy(s_hostname_field.buffer, Cvar_VariableString("hostname"));
+    s_hostname_field.cursor = strlen(s_hostname_field.buffer);
 
     s_startserver_dmoptions_action.generic.type = MTYPE_ACTION;
     s_startserver_dmoptions_action.generic.name = " deathmatch flags";
@@ -3533,6 +3717,11 @@ static menuframework_s s_downloadoptions_menu;
 
 static menuseparator_s s_download_title;
 static menulist_s s_allow_download_box;
+
+#ifdef USE_CURL
+static menulist_s s_allow_download_http_box;
+#endif
+
 static menulist_s s_allow_download_maps_box;
 static menulist_s s_allow_download_models_box;
 static menulist_s s_allow_download_players_box;
@@ -3547,6 +3736,12 @@ DownloadCallback(void *self)
     {
         Cvar_SetValue("allow_download", (float)f->curvalue);
     }
+#ifdef USE_CURL
+	else if (f == &s_allow_download_http_box)
+	{
+		Cvar_SetValue("cl_http_downloads", f->curvalue);
+	}
+#endif
     else if (f == &s_allow_download_maps_box)
     {
         Cvar_SetValue("allow_download_maps", (float)f->curvalue);
@@ -3591,9 +3786,21 @@ DownloadOptions_MenuInit(void)
     s_allow_download_box.itemnames = yes_no_names;
     s_allow_download_box.curvalue = (Cvar_VariableValue("allow_download") != 0);
 
+#ifdef USE_CURL
+	s_allow_download_http_box.generic.type = MTYPE_SPINCONTROL;
+	s_allow_download_http_box.generic.x	= 0;
+	s_allow_download_http_box.generic.y	= y += 20;
+	s_allow_download_http_box.generic.name	= "http downloading";
+	s_allow_download_http_box.generic.callback = DownloadCallback;
+	s_allow_download_http_box.itemnames = yes_no_names;
+	s_allow_download_http_box.curvalue = (Cvar_VariableValue("cl_http_downloads") != 0);
+#else
+	y += 10;
+#endif
+
     s_allow_download_maps_box.generic.type = MTYPE_SPINCONTROL;
     s_allow_download_maps_box.generic.x = 0;
-    s_allow_download_maps_box.generic.y = y += 20;
+    s_allow_download_maps_box.generic.y = y += 10;
     s_allow_download_maps_box.generic.name = "maps";
     s_allow_download_maps_box.generic.callback = DownloadCallback;
     s_allow_download_maps_box.itemnames = yes_no_names;
@@ -3629,6 +3836,11 @@ DownloadOptions_MenuInit(void)
 
     Menu_AddItem(&s_downloadoptions_menu, &s_download_title);
     Menu_AddItem(&s_downloadoptions_menu, &s_allow_download_box);
+
+#ifdef USE_CURL
+	Menu_AddItem(&s_downloadoptions_menu, &s_allow_download_http_box);
+#endif
+
     Menu_AddItem(&s_downloadoptions_menu, &s_allow_download_maps_box);
     Menu_AddItem(&s_downloadoptions_menu, &s_allow_download_players_box);
     Menu_AddItem(&s_downloadoptions_menu, &s_allow_download_models_box);
@@ -3868,7 +4080,6 @@ PlayerConfig_ScanDirectories(void)
 	for (i = 0; i < npms; i++)
 	{
 		int k, s;
-		char *a, *b, *c;
 		char **pcxnames;
 		char **skinnames;
 		fileHandle_t f;
@@ -3924,17 +4135,18 @@ PlayerConfig_ScanDirectories(void)
 		}
 
 		skinnames = malloc(sizeof(char *) * (nskins + 1));
+		YQ2_COM_CHECK_OOM(skinnames, "malloc()", sizeof(char *) * (nskins + 1))
+
 		memset(skinnames, 0, sizeof(char *) * (nskins + 1));
 
 		/* copy the valid skins */
 		for (s = 0, k = 0; k < npcxfiles - 1; k++)
 		{
-			char *a, *b, *c;
-
 			if (!strstr(pcxnames[k], "_i.pcx"))
 			{
 				if (IconOfSkinExists(pcxnames[k], pcxnames, npcxfiles - 1))
 				{
+					char *a, *b, *c;
 					a = strrchr(pcxnames[k], '/');
 					b = strrchr(pcxnames[k], '\\');
 
@@ -3965,32 +4177,31 @@ PlayerConfig_ScanDirectories(void)
 		s_pmi[s_numplayermodels].nskins = nskins;
 		s_pmi[s_numplayermodels].skindisplaynames = skinnames;
 
-		/* make short name for the model */
-		a = strrchr(dirnames[i], '/');
-		b = strrchr(dirnames[i], '\\');
-
-		if (a > b)
 		{
-			c = a;
+			char *a, *b, *c;
+			/* make short name for the model */
+			a = strrchr(dirnames[i], '/');
+			b = strrchr(dirnames[i], '\\');
+
+			if (a > b)
+			{
+				c = a;
+			}
+
+			else
+			{
+				c = b;
+			}
+
+			Q_strlcpy(s_pmi[s_numplayermodels].displayname, c + 1, sizeof(s_pmi[s_numplayermodels].displayname));
+			Q_strlcpy(s_pmi[s_numplayermodels].directory, c + 1, sizeof(s_pmi[s_numplayermodels].directory));
 		}
-
-		else
-		{
-			c = b;
-		}
-
-		Q_strlcpy(s_pmi[s_numplayermodels].displayname, c + 1, sizeof(s_pmi[s_numplayermodels].displayname));
-		Q_strlcpy(s_pmi[s_numplayermodels].directory, c + 1, sizeof(s_pmi[s_numplayermodels].directory));
-
 		FreeFileList(pcxnames, npcxfiles);
 
 		s_numplayermodels++;
 	}
 
-	if (dirnames)
-	{
-		FreeFileList(dirnames, ndirs);
-	}
+	FreeFileList(dirnames, ndirs);
 
 	return true;
 }
@@ -4203,8 +4414,7 @@ static void
 PlayerConfig_MenuDraw(void)
 {
     refdef_t refdef;
-    char scratch[MAX_QPATH];
-	float scale = SCR_GetMenuScale();
+    float scale = SCR_GetMenuScale();
 
     memset(&refdef, 0, sizeof(refdef));
 
@@ -4220,6 +4430,7 @@ PlayerConfig_MenuDraw(void)
     {
         static int yaw;
         entity_t entity;
+        char scratch[MAX_QPATH];
 
         memset(&entity, 0, sizeof(entity));
 
@@ -4272,11 +4483,10 @@ PlayerConfig_MenuDraw(void)
 static const char *
 PlayerConfig_MenuKey(int key)
 {
-    int i;
-
     if (key == K_ESCAPE)
     {
         char scratch[1024];
+        int i;
 
         Cvar_Set("name", s_player_name_field.buffer);
 
@@ -4436,10 +4646,9 @@ M_Draw(void)
 void
 M_Keydown(int key)
 {
-    const char *s;
-
     if (m_keyfunc)
     {
+        const char *s;
         if ((s = m_keyfunc(key)) != 0)
         {
             S_StartLocalSound((char *)s);
