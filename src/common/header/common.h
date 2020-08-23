@@ -731,6 +731,7 @@ extern char datadir[MAX_OSPATH];
 
 /* Hack for working 'game' cmd */
 extern char userGivenGame[MAX_QPATH];
+extern char **mapnames;
 
 extern FILE *log_stats_file;
 

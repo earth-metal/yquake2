@@ -1534,6 +1534,10 @@ FS_BuildGameSpecificSearchPath(char *dir)
 	// this function is called whenever the game cvar changes => the player wants to switch to another mod
 	// in that case the list of music tracks needs to be loaded again (=> tracks are possibly from the new mod dir)
 	OGG_InitTrackList();
+
+    // ...and the current list of maps in the "start network server" menu is
+    // cleared so that it will be re-initialized when the menu is accessed
+    mapnames = NULL;
 #endif
 }
 
