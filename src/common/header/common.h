@@ -676,10 +676,11 @@ void FS_BuildGameSpecificSearchPath(char *dir);
 char *FS_Gamedir(void);
 char *FS_NextPath(char *prevpath);
 int FS_LoadFile(char *path, void **buffer);
-const char* FS_GetNextRawPath(const char* lastRawPath);
-
 /* a null buffer will just return the file length without loading */
 /* a -1 length is not present */
+
+const char* FS_GetNextRawPath(const char* lastRawPath);
+char **FS_ListMods(int *nummods);
 
 /* properly handles partial reads */
 
