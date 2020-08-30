@@ -81,7 +81,7 @@ int RI_PrepareForWindow(void)
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-	if (SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8) < 0)
+	if (SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8) == 0)
 	{
 		gl_state.stencil = true;
 	}
@@ -130,7 +130,30 @@ int RI_PrepareForWindow(void)
  */
 void RI_SetVsync(void)
 {
-	SDL_GL_SetSwapInterval(r_vsync->value ? 1 : 0);
+	// Make sure that the user given
+	// value is SDL compatible...
+	int vsync = 0;
+
+	if (r_vsync->value == 1)
+	{
+		vsync = 1;
+	}
+	else if (r_vsync->value == 2)
+	{
+		vsync = -1;
+	}
+
+	if (SDL_GL_SetSwapInterval(vsync) == -1)
+	{
+		if (vsync == -1)
+		{
+			// Not every system supports adaptive
+			// vsync, fallback to normal vsync.
+			R_Printf(PRINT_ALL, "Failed to set adaptive vsync, reverting to normal vsync.\n");
+			SDL_GL_SetSwapInterval(1);
+		}
+	}
+
 	vsyncActive = SDL_GL_GetSwapInterval() != 0;
 }
 
@@ -209,7 +232,7 @@ int RI_InitContext(void* win)
 
 	if (gl_state.stencil)
 	{
-		if (SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencil_bits) != 8)
+		if (SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencil_bits) < 0 || stencil_bits < 8)
 		{
 			gl_state.stencil = false;
 		}

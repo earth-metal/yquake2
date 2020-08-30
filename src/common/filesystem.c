@@ -71,6 +71,7 @@ typedef struct
 	int numFiles;
 	FILE *pak;
 	unzFile *pk3;
+	qboolean isProtectedPak;
 	fsPackFile_t *files;
 } fsPack_t;
 
@@ -103,12 +104,13 @@ fsPackTypes_t fs_packtypes[] = {
 	{"pak", PAK},
 	{"pk2", PK3},
 	{"pk3", PK3},
+	{"pkz", PK3},
 	{"zip", PK3}
 };
 
 char datadir[MAX_OSPATH];
 char fs_gamedir[MAX_OSPATH];
-qboolean file_from_pak;
+qboolean file_from_protected_pak;
 
 cvar_t *fs_basedir;
 cvar_t *fs_cddir;
@@ -374,7 +376,7 @@ FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
 	fsSearchPath_t *search;
 	int i;
 
-	file_from_pak = false;
+	file_from_protected_pak = false;
 	handle = FS_HandleForFile(name, f);
 	Q_strlcpy(handle->name, name, sizeof(handle->name));
 	handle->mode = FS_READ;
@@ -414,10 +416,19 @@ FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
 						           handle->name, pack->name);
 					}
 
+					// save the name with *correct case* in the handle
+					// (relevant for savegames, when starting map with wrong case but it's still found
+					//  because it's from pak, but save/bla/MAPname.sav/sv2 will have wrong case and can't be found then)
+					Q_strlcpy(handle->name, pack->files[i].name, sizeof(handle->name));
+
 					if (pack->pak)
 					{
 						/* PAK */
-						file_from_pak = true;
+						if (pack->isProtectedPak)
+						{
+							file_from_protected_pak = true;
+						}
+
 						handle->file = Q_fopen(pack->name, "rb");
 
 						if (handle->file)
@@ -429,7 +440,10 @@ FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
 					else if (pack->pk3)
 					{
 						/* PK3 */
-						file_from_pak = true;
+						if (pack->isProtectedPak)
+						{
+							file_from_protected_pak = true;
+						}
 
 #ifdef _WIN32
 						handle->zip = unzOpen2(pack->name, &zlib_file_api);
@@ -468,11 +482,6 @@ FS_FOpenFile(const char *name, fileHandle_t *f, qboolean gamedir_only)
 				Q_strlwr(lwrName);
 				Com_sprintf(path, sizeof(path), "%s/%s", search->path, lwrName);
 				handle->file = Q_fopen(path, "rb");
-			}
-
-			if (!handle->file)
-			{
-				continue;
 			}
 
 			if (handle->file)
@@ -693,7 +702,7 @@ FS_LoadPAK(const char *packPath)
 	fsPackFile_t *files; /* List of files in PAK. */
 	fsPack_t *pack; /* PAK file. */
 	dpackheader_t header; /* PAK file header. */
-	dpackfile_t info[MAX_FILES_IN_PACK]; /* PAK info. */
+	dpackfile_t *info = NULL; /* PAK info. */
 
 	handle = Q_fopen(packPath, "rb");
 
@@ -707,7 +716,7 @@ FS_LoadPAK(const char *packPath)
 	if (LittleLong(header.ident) != IDPAKHEADER)
 	{
 		fclose(handle);
-		Com_Error(ERR_FATAL, "FS_LoadPAK: '%s' is not a pack file", packPath);
+		Com_Error(ERR_FATAL, "%s: '%s' is not a pack file", __func__, packPath);
 	}
 
 	header.dirofs = LittleLong(header.dirofs);
@@ -715,11 +724,24 @@ FS_LoadPAK(const char *packPath)
 
 	numFiles = header.dirlen / sizeof(dpackfile_t);
 
-	if ((numFiles > MAX_FILES_IN_PACK) || (numFiles == 0))
+	if ((numFiles == 0) || (header.dirlen < 0) || (header.dirofs < 0))
 	{
 		fclose(handle);
-		Com_Error(ERR_FATAL, "FS_LoadPAK: '%s' has %i files",
-				packPath, numFiles);
+		Com_Error(ERR_FATAL, "%s: '%s' is too short.",
+				__func__, packPath);
+	}
+
+	if (numFiles > MAX_FILES_IN_PACK)
+	{
+		Com_Printf("%s: '%s' has %i > %i files\n",
+				__func__, packPath, numFiles, MAX_FILES_IN_PACK);
+	}
+
+	info = malloc(header.dirlen);
+	if (!info)
+	{
+		Com_Error(ERR_FATAL, "%s: '%s' is to big for read %d",
+				__func__, packPath, header.dirlen);
 	}
 
 	files = Z_Malloc(numFiles * sizeof(fsPackFile_t));
@@ -734,6 +756,7 @@ FS_LoadPAK(const char *packPath)
 		files[i].offset = LittleLong(info[i].filepos);
 		files[i].size = LittleLong(info[i].filelen);
 	}
+	free(info);
 
 	pack = Z_Malloc(sizeof(fsPack_t));
 	Q_strlcpy(pack->name, packPath, sizeof(pack->name));
@@ -785,11 +808,11 @@ FS_LoadPK3(const char *packPath)
 
 	numFiles = global.number_entry;
 
-	if ((numFiles > MAX_FILES_IN_PACK) || (numFiles == 0))
+	if (numFiles <= 0)
 	{
 		unzClose(handle);
-		Com_Error(ERR_FATAL, "FS_LoadPK3: '%s' has %i files",
-				packPath, numFiles);
+		Com_Error(ERR_FATAL, "%s: '%s' has %i files",
+				__func__, packPath, numFiles);
 	}
 
 	files = Z_Malloc(numFiles * sizeof(fsPackFile_t));
@@ -989,6 +1012,7 @@ FS_ListFiles(char *findname, int *numfiles,
 
 	/* Allocate the list. */
 	list = calloc(nfiles, sizeof(char *));
+	YQ2_COM_CHECK_OOM(list, "calloc()", (size_t)nfiles*sizeof(char*))
 
 	/* Fill the list. */
 	s = Sys_FindFirst(findname, musthave, canthave);
@@ -1091,6 +1115,7 @@ FS_ListFiles2(char *findname, int *numfiles,
 
 	nfiles = 0;
 	list = malloc(sizeof(char *));
+	YQ2_COM_CHECK_OOM(list, "malloc()", sizeof(char*))
 
 	for (search = fs_searchPaths; search != NULL; search = search->next)
 	{
@@ -1117,6 +1142,7 @@ FS_ListFiles2(char *findname, int *numfiles,
 
 			nfiles += j;
 			list = realloc(list, nfiles * sizeof(char *));
+			YQ2_COM_CHECK_OOM(list, "realloc()", (size_t)nfiles*sizeof(char*))
 
 			for (i = 0, j = nfiles - j; i < search->pack->numFiles; i++)
 			{
@@ -1141,6 +1167,7 @@ FS_ListFiles2(char *findname, int *numfiles,
 			tmpnfiles--;
 			nfiles += tmpnfiles;
 			list = realloc(list, nfiles * sizeof(char *));
+			YQ2_COM_CHECK_OOM(list, "2nd realloc()", (size_t)nfiles*sizeof(char*))
 
 			for (i = 0, j = nfiles - tmpnfiles; i < tmpnfiles; i++, j++)
 			{
@@ -1177,6 +1204,7 @@ FS_ListFiles2(char *findname, int *numfiles,
 	{
 		nfiles -= tmpnfiles;
 		tmplist = malloc(nfiles * sizeof(char *));
+		YQ2_COM_CHECK_OOM(tmplist, "malloc()", (size_t)nfiles*sizeof(char*))
 
 		for (i = 0, j = 0; i < nfiles + tmpnfiles; i++)
 		{
@@ -1195,6 +1223,7 @@ FS_ListFiles2(char *findname, int *numfiles,
 	{
 		nfiles++;
 		list = realloc(list, nfiles * sizeof(char *));
+		YQ2_COM_CHECK_OOM(list, "3rd realloc()", (size_t)nfiles*sizeof(char*))
 		list[nfiles - 1] = NULL;
 	}
 
@@ -1274,21 +1303,114 @@ FS_Dir_f(void)
 
 // --------
 
+/*
+ * This function returns true if a real file (e.g. not something
+ * in a pak, somthing in the file system itself) exists in the
+ * current gamedir.
+ */
+qboolean
+FS_FileInGamedir(const char *file)
+{
+	char path[MAX_OSPATH];
+	FILE *fd;
+
+	Com_sprintf(path, sizeof(path), "%s/%s", fs_gamedir, file);
+
+	if ((fd = Q_fopen(path, "rb")) != NULL)
+	{
+		fclose(fd);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+/*
+ * This function loads the given .pak / .pk3 File from the
+ * fs_gamedir. There's no need to load from other dirs since
+ * fs_gamedir is the only dir written to at runtime.
+ */
+qboolean
+FS_AddPAKFromGamedir(const char *pak)
+{
+	char path[MAX_OSPATH];
+
+	Com_sprintf(path, sizeof(path), "%s/%s", fs_gamedir, pak);
+
+	// Check of the file really exists.
+	FILE *fd;
+
+	if ((fd = Q_fopen(path, "rb")) == NULL)
+	{
+		assert(fd && "FS_AddPAKfromGamedir() called with nonexisting file");;
+	}
+	else
+	{
+		fclose(fd);
+	}
+
+	// Depending on filetype we must load it as .pak or .pk3.
+	for (int i = 0; i < sizeof(fs_packtypes) / sizeof(fs_packtypes[0]); i++)
+	{
+		// Not the current filetype, next one please.
+		if (strncmp(pak + strlen(pak) - strlen(fs_packtypes[i].suffix), fs_packtypes[i].suffix, strlen(fs_packtypes[i].suffix)))
+		{
+			continue;
+		}
+
+		fsPack_t *pakfile = NULL;
+
+		switch (fs_packtypes[i].format)
+		{
+			case PAK:
+				pakfile = FS_LoadPAK(path);
+				break;
+			case PK3:
+				pakfile = FS_LoadPK3(path);
+				break;
+		}
+
+		if (pakfile == NULL)
+		{
+			// Couldn't load it.
+			return false;
+		}
+		else
+		{
+			// Add it.
+			fsSearchPath_t *search = Z_Malloc(sizeof(fsSearchPath_t));
+			search->pack = pakfile;
+			search->next = fs_searchPaths;
+			fs_searchPaths = search;
+
+			return true;
+		}
+	}
+
+	// Apparently we didn't load anything.
+	return false;
+}
+
 const char*
 FS_GetNextRawPath(const char* lastRawPath)
 {
 	assert(fs_rawPath != NULL && "Don't call this if before FS_InitFilesystem()");
-	if(lastRawPath == NULL)
+
+	if (lastRawPath == NULL)
 	{
 		return fs_rawPath->path;
 	}
-	for(fsRawPath_t* rp = fs_rawPath; rp != NULL; rp = rp->next)
+
+	for (fsRawPath_t* rp = fs_rawPath; rp != NULL; rp = rp->next)
 	{
-		if(rp->path == lastRawPath)
+		if (rp->path == lastRawPath)
 		{
 			return (rp->next != NULL) ? rp->next->path : NULL;
 		}
 	}
+
 	return NULL;
 }
 
@@ -1327,7 +1449,7 @@ FS_AddDirToSearchPath(char *dir, qboolean create) {
 	search->next = fs_searchPaths;
 	fs_searchPaths = search;
 
-	// We need to add numbered paks in te directory in
+	// We need to add numbered paks in the directory in
 	// sequence and all other paks after them. Otherwise
 	// the gamedata may break.
 	for (i = 0; i < sizeof(fs_packtypes) / sizeof(fs_packtypes[0]); i++) {
@@ -1338,9 +1460,21 @@ FS_AddDirToSearchPath(char *dir, qboolean create) {
 			{
 				case PAK:
 					pack = FS_LoadPAK(path);
+
+					if (pack)
+					{
+						pack->isProtectedPak = true;
+					}
+
 					break;
 				case PK3:
 					pack = FS_LoadPK3(path);
+
+					if (pack)
+					{
+						pack->isProtectedPak = false;
+					}
+
 					break;
 			}
 
@@ -1392,6 +1526,8 @@ FS_AddDirToSearchPath(char *dir, qboolean create) {
 			{
 				continue;
 			}
+
+			pack->isProtectedPak = false;
 
 			search = Z_Malloc(sizeof(fsSearchPath_t));
 			search->pack = pack;
@@ -1501,7 +1637,7 @@ FS_BuildGameSpecificSearchPath(char *dir)
 	}
 
 	// The game was reset to baseq2. Nothing to do here.
-	if ((Q_stricmp(dir, BASEDIRNAME) == 0) || (*dir == 0)) {
+	if (Q_stricmp(dir, BASEDIRNAME) == 0) {
 		Cvar_FullSet("gamedir", "", CVAR_SERVERINFO | CVAR_NOSET);
 		Cvar_FullSet("game", "", CVAR_LATCH | CVAR_SERVERINFO);
 
@@ -1532,14 +1668,28 @@ FS_BuildGameSpecificSearchPath(char *dir)
 	Qcommon_ExecConfigs(false);
 
 #ifndef DEDICATED_ONLY
-	// this function is called whenever the game cvar changes => the player wants to switch to another mod
-	// in that case the list of music tracks needs to be loaded again (=> tracks are possibly from the new mod dir)
+	// This function is called whenever the game cvar changes =>
+	// the player wants to switch to another mod. In that case the
+	// list of music tracks needs to be loaded again (=> tracks
+	// are possibly from the new mod dir)
 	OGG_InitTrackList();
 
     // ...and the current list of maps in the "start network server" menu is
     // cleared so that it will be re-initialized when the menu is accessed
     mapnames = NULL;
 #endif
+}
+
+// returns the filename used to open f, but (if opened from pack) in correct case
+// returns NULL if f is no valid handle
+const char* FS_GetFilenameForHandle(fileHandle_t f)
+{
+	fsHandle_t* fsh = FS_GetFileByHandle(f);
+	if(fsh)
+	{
+		return fsh->name;
+	}
+	return NULL;
 }
 
 // --------

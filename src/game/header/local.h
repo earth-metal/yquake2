@@ -72,6 +72,7 @@
 #define FL_TEAMSLAVE 0x00000400 /* not the first on the team */
 #define FL_NO_KNOCKBACK 0x00000800
 #define FL_POWER_ARMOR 0x00001000 /* power armor (if any) is active */
+#define FL_COOP_TAKEN 0x00002000 /* Another client has already taken it */
 #define FL_RESPAWN 0x80000000 /* used for item respawning */
 
 #define FRAMETIME 0.1
@@ -215,6 +216,7 @@ typedef struct
 #define IT_STAY_COOP 8
 #define IT_KEY 16
 #define IT_POWERUP 32
+#define IT_INSTANT_USE 64 /* item is insta-used on pickup if dmflag is set */
 
 /* gitem_t->weapmodel for weapons indicates model index */
 #define WEAP_BLASTER 1
@@ -485,6 +487,12 @@ extern int gibsthisframe;
 #define MOD_TARGET_BLASTER 33
 #define MOD_FRIENDLY_FIRE 0x8000000
 
+/* Easier handling of AI skill levels */
+#define SKILL_EASY 0
+#define SKILL_MEDIUM 1
+#define SKILL_HARD 2
+#define SKILL_HARDPLUS 3
+
 extern int meansOfDeath;
 
 extern edict_t *g_edicts;
@@ -500,6 +508,8 @@ extern edict_t *g_edicts;
 extern cvar_t *maxentities;
 extern cvar_t *deathmatch;
 extern cvar_t *coop;
+extern cvar_t *coop_pickup_weapons;
+extern cvar_t *coop_elevator_delay;
 extern cvar_t *dmflags;
 extern cvar_t *skill;
 extern cvar_t *fraglimit;
@@ -534,6 +544,8 @@ extern cvar_t *flood_persecond;
 extern cvar_t *flood_waitdelay;
 
 extern cvar_t *sv_maplist;
+
+extern cvar_t *aimfix;
 
 #define world (&g_edicts[0])
 
@@ -573,6 +585,7 @@ typedef struct
 	int ofs;
 	fieldtype_t type;
 	int flags;
+	short save_ver;
 } field_t;
 
 extern field_t fields[];
@@ -1014,15 +1027,15 @@ struct edict_s
 	float touch_debounce_time;
 	float pain_debounce_time;
 	float damage_debounce_time;
-	float fly_sound_debounce_time;
+	float fly_sound_debounce_time;	/* now also used by insane marines to store pain sound timeout */
 	float last_move_time;
 
 	int health;
 	int max_health;
 	int gib_health;
 	int deadflag;
-	int show_hostile;
 
+	float show_hostile;
 	float powerarmor_time;
 
 	char *map; /* target_changelevel */

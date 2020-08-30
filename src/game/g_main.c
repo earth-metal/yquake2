@@ -40,6 +40,8 @@ edict_t *g_edicts;
 
 cvar_t *deathmatch;
 cvar_t *coop;
+cvar_t *coop_pickup_weapons;
+cvar_t *coop_elevator_delay;
 cvar_t *dmflags;
 cvar_t *skill;
 cvar_t *fraglimit;
@@ -79,6 +81,8 @@ cvar_t *flood_waitdelay;
 cvar_t *sv_maplist;
 
 cvar_t *gib_on;
+
+cvar_t *aimfix;
 
 void SpawnEntities(char *mapname, char *entities, char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
@@ -156,7 +160,7 @@ Sys_Error(char *error, ...)
 	char text[1024];
 
 	va_start(argptr, error);
-	vsprintf(text, error, argptr);
+	vsnprintf(text, sizeof(text), error, argptr);
 	va_end(argptr);
 
 	gi.error("%s", text);
@@ -169,7 +173,7 @@ Com_Printf(char *msg, ...)
 	char text[1024];
 
 	va_start(argptr, msg);
-	vsprintf(text, msg, argptr);
+	vsnprintf(text, sizeof(text), msg, argptr);
 	va_end(argptr);
 
 	gi.dprintf("%s", text);
@@ -398,9 +402,9 @@ ExitLevel(void)
 			continue;
 		}
 
-		if (ent->health > ent->client->pers.max_health)
+		if (ent->health > ent->max_health)
 		{
-			ent->health = ent->client->pers.max_health;
+			ent->health = ent->max_health;
 		}
 	}
 
